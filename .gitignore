@@ -1,0 +1,25 @@
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Build/package artifacts
+build/
+dist/
+*.egg-info/
+
+# uv creates this during ephemeral local test runs; this library has no runtime deps.
+uv.lock
+
+# Local agent planning notes
+STORIES.md
+CONSTRAINTS.md
+
+# Local SQLite/data files
+*.db
+*.db-*
+.data/

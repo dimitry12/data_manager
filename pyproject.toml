@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "data-manager"
+version = "0.1.0"
+description = "Minimal SQLite-backed derivation data store."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+license = "MIT"
+authors = [
+  { name = "data-manager contributors" }
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.4.2",
+  "pytest-xdist==3.8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
