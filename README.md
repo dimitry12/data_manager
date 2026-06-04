@@ -5,7 +5,7 @@ Minimal stdlib-only SQLite store for derivation outputs, including binary and JS
 Install directly from GitHub, for example:
 
 ```bash
-pip install "data-manager @ git+https://github.com/<owner>/<repo>.git@<commit>"
+pip install "data-manager @ git+https://github.com/dimitry12/data_manager.git@v0.1.0"
 ```
 
 ## Model
