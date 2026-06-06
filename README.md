@@ -5,7 +5,7 @@ Minimal stdlib-only SQLite store for derivation outputs, including binary and JS
 Install directly from GitHub, for example:
 
 ```bash
-pip install "data-manager @ git+https://github.com/dimitry12/data_manager.git@v0.1.0"
+pip install "data-manager @ git+https://github.com/dimitry12/data_manager.git@v0.2.0"
 ```
 
 ## Model
@@ -81,6 +81,18 @@ def make_thumbnail(image_path: str, *, size: int = 256) -> bytes:
 ```
 
 `get()` returns a `DataRecord` with `.id`, `.data`, `.metadata`, `.params`, `.derivation_type`, and `.value_type`. Values passed as `bytes`, `bytearray`, or `memoryview` are stored verbatim as SQLite BLOBs and returned as `bytes`. Other values are stored as canonical JSON and returned as Python values.
+
+## Metadata context
+
+Use `metadata_context()` to apply metadata to multiple `put()` calls without passing `metadata=` each time.
+
+```python
+with data_manager.metadata_context({"experiment": "baseline", "model": "captioner-v1"}):
+    caption = caption_image("image.png")
+    thumbnail = make_thumbnail("image.png")
+```
+
+Nested metadata contexts overwrite while active and restore the previous metadata on exit. Explicit `metadata=` on `put()` wins over context metadata, including `metadata=None`.
 
 ## Process-wide configuration
 

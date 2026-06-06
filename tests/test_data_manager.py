@@ -1,5 +1,6 @@
 import sqlite3
 
+import data_manager
 from data_manager import DataManager
 
 
@@ -44,6 +45,40 @@ def test_put_get_string_roundtrip_without_manual_encoding(tmp_path):
     store.put("caption", {"image": "x.png"}, "plain caption")
 
     assert store.get("caption", {"image": "x.png"}).data == "plain caption"
+
+
+def test_metadata_context_applies_when_metadata_is_omitted(tmp_path):
+    store = DataManager(tmp_path / "data.db")
+
+    with data_manager.metadata_context({"run": "demo"}):
+        store.put("demo", {"x": 1}, "value")
+
+    assert store.get("demo", {"x": 1}).metadata == {"run": "demo"}
+
+
+def test_nested_metadata_context_overwrites_then_restores(tmp_path):
+    store = DataManager(tmp_path / "data.db")
+
+    with data_manager.metadata_context({"scope": "outer"}):
+        store.put("demo", {"x": 1}, "outer")
+        with data_manager.metadata_context({"scope": "inner"}):
+            store.put("demo", {"x": 2}, "inner")
+        store.put("demo", {"x": 3}, "outer-again")
+
+    assert store.get("demo", {"x": 1}).metadata == {"scope": "outer"}
+    assert store.get("demo", {"x": 2}).metadata == {"scope": "inner"}
+    assert store.get("demo", {"x": 3}).metadata == {"scope": "outer"}
+
+
+def test_explicit_metadata_overrides_context_metadata(tmp_path):
+    store = DataManager(tmp_path / "data.db")
+
+    with data_manager.metadata_context({"scope": "context"}):
+        store.put("demo", {"x": 1}, "explicit", metadata={"scope": "explicit"})
+        store.put("demo", {"x": 2}, "none", metadata=None)
+
+    assert store.get("demo", {"x": 1}).metadata == {"scope": "explicit"}
+    assert store.get("demo", {"x": 2}).metadata is None
 
 
 def test_hash_uses_canonical_params_but_not_metadata(tmp_path):

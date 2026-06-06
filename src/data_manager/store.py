@@ -3,13 +3,16 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
-from contextlib import closing
+from contextlib import closing, contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 
 _TABLE_NAME = "derived_data"
+_METADATA_UNSET = object()
+_context_metadata: ContextVar[Any] = ContextVar("data_manager_metadata", default=_METADATA_UNSET)
 
 
 class NotFoundError(KeyError):
@@ -41,6 +44,26 @@ def _parameter_id(params: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+@contextmanager
+def metadata_context(metadata: Any):
+    """Use metadata for put calls that do not specify metadata explicitly."""
+
+    token = _context_metadata.set(metadata)
+    try:
+        yield
+    finally:
+        _context_metadata.reset(token)
+
+
+def _effective_metadata(metadata: Any) -> Any | None:
+    if metadata is not _METADATA_UNSET:
+        return metadata
+    context_metadata = _context_metadata.get()
+    if context_metadata is _METADATA_UNSET:
+        return None
+    return context_metadata
+
+
 class NoOpDataManager:
     """Store implementation that computes ids but does not persist anything."""
 
@@ -50,7 +73,7 @@ class NoOpDataManager:
         params: Any,
         data: Any,
         *,
-        metadata: Any | None = None,
+        metadata: Any = _METADATA_UNSET,
     ) -> str:
         return _parameter_id(params)
 
@@ -76,13 +99,14 @@ class DataManager:
         params: Any,
         data: Any,
         *,
-        metadata: Any | None = None,
+        metadata: Any = _METADATA_UNSET,
     ) -> str:
         """Insert or update data and return the record id."""
 
         record_id = _parameter_id(params)
         value_type, stored_data = self._encode_data(data)
         params_json = _canonical_json(params)
+        metadata = _effective_metadata(metadata)
         metadata_json = None if metadata is None else _canonical_json(metadata)
 
         with closing(self.connect()) as conn:

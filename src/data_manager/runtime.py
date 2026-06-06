@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .store import DataManager, DataRecord, NoOpDataManager
+from .store import _METADATA_UNSET, DataManager, DataRecord, NoOpDataManager, metadata_context
 
 Store = DataManager | NoOpDataManager
 
@@ -41,7 +41,7 @@ def put(
     params: Any,
     data: Any,
     *,
-    metadata: Any | None = None,
+    metadata: Any = _METADATA_UNSET,
 ) -> str:
     return get_store().put(derivation_type, params, data, metadata=metadata)
 
