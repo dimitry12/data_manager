@@ -1,7 +1,7 @@
 import pytest
 
 import data_manager
-from data_manager import DataManager, NotFoundError
+from data_manager import DataManager, NotFoundDoNotComputeError, NotFoundError
 
 
 @pytest.fixture(autouse=True)
@@ -71,3 +71,56 @@ def test_noop_store_computes_ids_but_never_persists():
 def test_configure_rejects_path_and_store_together(tmp_path):
     with pytest.raises(ValueError):
         data_manager.configure(tmp_path / "cache.db", store=DataManager(tmp_path / "other.db"))
+
+
+def test_cache_only_miss_advises_against_fallback_computation(tmp_path):
+    data_manager.configure(tmp_path / "cache.db", cache_only=True)
+
+    with pytest.raises(NotFoundDoNotComputeError, match="fallback computation should not run"):
+        data_manager.get("demo", {"x": 1})
+
+
+def test_noop_cache_only_miss_has_the_same_behavior():
+    data_manager.configure(cache_only=True)
+
+    with pytest.raises(NotFoundDoNotComputeError):
+        data_manager.get("demo", {"x": 1})
+
+
+def test_cache_only_advisory_is_a_not_found_error():
+    assert issubclass(NotFoundDoNotComputeError, NotFoundError)
+
+
+def test_cache_only_mode_returns_existing_records(tmp_path):
+    data_manager.configure(tmp_path / "cache.db", cache_only=True)
+    data_manager.put("demo", {"x": 1}, "value")
+
+    assert data_manager.get("demo", {"x": 1}).data == "value"
+
+
+def test_direct_store_honors_cache_only_mode(tmp_path):
+    store = DataManager(tmp_path / "cache.db", cache_only=True)
+
+    with pytest.raises(NotFoundDoNotComputeError):
+        store.get("demo", {"x": 1})
+
+
+def test_configure_applies_cache_only_mode_to_precreated_store(tmp_path):
+    store = DataManager(tmp_path / "cache.db")
+    data_manager.configure(store=store, cache_only=True)
+
+    with pytest.raises(NotFoundDoNotComputeError):
+        store.get("demo", {"x": 1})
+
+    with pytest.raises(NotFoundDoNotComputeError):
+        data_manager.get_store().get("demo", {"x": 1})
+
+
+def test_configure_resets_cache_only_mode(tmp_path):
+    data_manager.configure(tmp_path / "cache.db", cache_only=True)
+    data_manager.configure(tmp_path / "other.db")
+
+    with pytest.raises(NotFoundError) as error:
+        data_manager.get("demo", {"x": 1})
+
+    assert type(error.value) is NotFoundError

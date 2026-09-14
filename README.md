@@ -5,7 +5,7 @@ Minimal stdlib-only SQLite store for derivation outputs, including binary and JS
 Install directly from GitHub, for example:
 
 ```bash
-pip install "data-manager @ git+https://github.com/dimitry12/data_manager.git@v0.2.0"
+pip install "data-manager @ git+https://github.com/dimitry12/data_manager.git@v0.3.0"
 ```
 
 ## Model
@@ -110,3 +110,38 @@ You can also install a pre-created store:
 store = data_manager.DataManager(".data/derivations.db")
 data_manager.configure(store=store)
 ```
+
+### Cache-only misses
+
+Use cache-only mode when a missing value should not trigger potentially
+expensive fallback computation:
+
+```python
+data_manager.configure(".data/derivations.db", cache_only=True)
+
+try:
+    result = data_manager.get(**cache_key).data
+except data_manager.NotFoundDoNotComputeError:
+    result = None  # Skip or report the missing derivation; do not compute it.
+except data_manager.NotFoundError:
+    result = run_expensive_computation()
+```
+
+`NotFoundDoNotComputeError` is a subclass of `NotFoundError`, so existing code
+that treats all misses alike remains compatible. Code that respects the
+cache-only advice must catch the subclass before `NotFoundError`.
+
+Cache-only behavior belongs to the store and is therefore consistent between
+the module-level helper, `get_store()`, and direct stores:
+
+```python
+store = data_manager.DataManager(".data/derivations.db", cache_only=True)
+
+try:
+    result = store.get(**cache_key).data
+except data_manager.NotFoundDoNotComputeError:
+    result = None
+```
+
+Passing a pre-created store with `configure(store=store, cache_only=True)` also
+enables cache-only behavior on that store.

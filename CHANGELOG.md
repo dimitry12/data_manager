@@ -4,6 +4,12 @@ All notable changes to data-manager are documented here.
 
 ## Unreleased
 
+## 0.3.0
+
+- Add advisory cache-only mode. Cache misses raise
+  `NotFoundDoNotComputeError`, a subclass of `NotFoundError`, when a store is
+  configured with `cache_only=True`.
+
 ## 0.2.0
 
 - Add `metadata_context()` for applying default metadata to cache writes, with nested contexts restoring previous metadata and explicit `put(..., metadata=...)` taking precedence.

@@ -19,6 +19,18 @@ class NotFoundError(KeyError):
     """Raised when a requested derivation record does not exist."""
 
 
+class NotFoundDoNotComputeError(NotFoundError):
+    """Raised on a cache-only miss to advise against fallback computation."""
+
+
+def _not_found_error(message: str, *, cache_only: bool) -> NotFoundError:
+    if cache_only:
+        return NotFoundDoNotComputeError(
+            f"{message}; cache-only mode is enabled, so fallback computation should not run"
+        )
+    return NotFoundError(message)
+
+
 @dataclass(frozen=True)
 class DataRecord:
     """A stored derivation value."""
@@ -67,6 +79,9 @@ def _effective_metadata(metadata: Any) -> Any | None:
 class NoOpDataManager:
     """Store implementation that computes ids but does not persist anything."""
 
+    def __init__(self, *, cache_only: bool = False) -> None:
+        self.cache_only = cache_only
+
     def put(
         self,
         derivation_type: str,
@@ -79,14 +94,18 @@ class NoOpDataManager:
 
     def get(self, derivation_type: str, params: Any) -> DataRecord:
         record_id = _parameter_id(params)
-        raise NotFoundError(f"No record for derivation_type={derivation_type!r}, id={record_id!r}; store is disabled")
+        raise _not_found_error(
+            f"No record for derivation_type={derivation_type!r}, id={record_id!r}; store is disabled",
+            cache_only=self.cache_only,
+        )
 
 
 class DataManager:
     """SQLite-backed store for derivation outputs."""
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, cache_only: bool = False) -> None:
         self.path = Path(path)
+        self.cache_only = cache_only
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_table()
 
@@ -139,7 +158,10 @@ class DataManager:
             ).fetchone()
 
         if row is None:
-            raise NotFoundError(f"No record for derivation_type={derivation_type!r}, id={record_id!r}")
+            raise _not_found_error(
+                f"No record for derivation_type={derivation_type!r}, id={record_id!r}",
+                cache_only=self.cache_only,
+            )
 
         params_json, metadata_json, value_type, data = row
         return DataRecord(

@@ -10,12 +10,18 @@ Store = DataManager | NoOpDataManager
 _store: Store = NoOpDataManager()
 
 
-def configure(path: str | Path | None = None, *, store: Store | None = None) -> Store:
-    """Set the process-wide store.
+def configure(
+    path: str | Path | None = None,
+    *,
+    store: Store | None = None,
+    cache_only: bool = False,
+) -> Store:
+    """Set the process-wide store and cache-miss behavior.
 
     Configure once at process startup, then use module-level helpers from any
     other module in the same process. With no configuration, data-manager stays
-    in no-op mode.
+    in no-op mode. In cache-only mode, the configured store raises
+    ``NotFoundDoNotComputeError`` on a miss.
     """
 
     global _store
@@ -23,12 +29,14 @@ def configure(path: str | Path | None = None, *, store: Store | None = None) -> 
     if store is not None:
         if path is not None:
             raise ValueError("store cannot be combined with path")
-        _store = store
+        store.cache_only = cache_only
+        configured_store = store
     elif path is None:
-        _store = NoOpDataManager()
+        configured_store = NoOpDataManager(cache_only=cache_only)
     else:
-        _store = DataManager(path)
+        configured_store = DataManager(path, cache_only=cache_only)
 
+    _store = configured_store
     return _store
 
 
