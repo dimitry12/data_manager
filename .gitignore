@@ -19,6 +19,9 @@ uv.lock
 STORIES.md
 CONSTRAINTS.md
 
+# Local database pointer (may contain an absolute path shared by worktrees)
+.data_manager_path
+
 # Local SQLite/data files
 *.db
 *.db-*

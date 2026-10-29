@@ -4,6 +4,13 @@ All notable changes to data-manager are documented here.
 
 ## Unreleased
 
+## 0.4.0
+
+- Discover the default SQLite path from `.data_manager_path` in the current
+  working directory, allowing worktrees and temporary checkouts to share a
+  database. Explicit configuration takes precedence; a missing file keeps
+  no-op mode.
+
 ## 0.3.0
 
 - Add advisory cache-only mode. Cache misses raise

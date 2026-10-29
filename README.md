@@ -5,7 +5,7 @@ Minimal stdlib-only SQLite store for derivation outputs, including binary and JS
 Install directly from GitHub, for example:
 
 ```bash
-pip install "data-manager @ git+https://github.com/dimitry12/data_manager.git@v0.3.0"
+pip install "data-manager @ git+https://github.com/dimitry12/data_manager.git@v0.4.0"
 ```
 
 ## Model
@@ -23,7 +23,7 @@ The primary key is `(derivation_type, id)`, so different derivation types can us
 
 ## Typical cache usage
 
-Configure once at process startup:
+Configure once at process startup (or use the `.data_manager_path` file described below):
 
 ```python
 # app_startup.py
@@ -96,15 +96,29 @@ Nested metadata contexts overwrite while active and restore the previous metadat
 
 ## Process-wide configuration
 
-If you never call `configure()`, module-level helpers use no-op mode by default. In no-op mode, `put()` still returns the deterministic parameter hash, but nothing is persisted and `get()` raises `NotFoundError`.
+### Default database path
 
-You can also return to no-op mode explicitly:
+Without explicit configuration, the first `get()`, `put()`, or `get_store()` checks for a file named `.data_manager_path` in the current working directory. Put the database path in this UTF-8 text file, for example:
+
+```text
+/absolute/path/to/shared/derivations.db
+```
+
+Surrounding whitespace and trailing newlines are stripped. Absolute paths are used directly; relative paths are resolved against the directory containing the file. Only the current directory is checked, not parent directories. An empty or whitespace-only file raises `ValueError`; other file read errors are propagated.
+
+This lets Git worktrees and temporary checkouts reuse one database without copying it. Keep the database outside the checkouts, add `.data_manager_path` to the consuming project's `.gitignore`, and create or copy the small pointer file into each checkout with the same absolute path. Git does not automatically copy ignored files into new worktrees. Cache identity still depends on derivation type and parameters, not the checkout, so include any relevant code/input version in your parameters.
+
+The selected store is reused for the process, even if the working directory or pointer file changes. Calling `configure()` without arguments re-reads the default from the current directory:
 
 ```python
 data_manager.configure()
 ```
 
-You can also install a pre-created store:
+If `.data_manager_path` is absent, the default is no-op mode: `put()` still returns the deterministic parameter hash, but nothing is persisted and `get()` raises `NotFoundError`.
+
+Explicit `configure(path)` or `configure(store=...)` takes precedence and does not read the pointer file. Direct `DataManager(path)` instances also continue to require an explicit path.
+
+You can install a pre-created store:
 
 ```python
 store = data_manager.DataManager(".data/derivations.db")
